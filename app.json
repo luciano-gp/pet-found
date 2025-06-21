@@ -9,14 +9,20 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "statusBarStyle": "dark",
+      "statusBarBackgroundColor": "#f8f9fa"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": false,
+      "statusBarStyle": "dark",
+      "statusBarBackgroundColor": "#f8f9fa",
+      "navigationBarColor": "#f8f9fa",
+      "navigationBarStyle": "dark"
     },
     "web": {
       "bundler": "metro",
