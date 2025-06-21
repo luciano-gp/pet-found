@@ -18,6 +18,19 @@ export default function AppLayout() {
         <Stack.Screen name="explore-reports" options={{ headerShown: false }} />
         <Stack.Screen name="explore-lost-pets" options={{ headerShown: false }} />
         <Stack.Screen name="map" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="contact-info" 
+          options={{ 
+            title: 'Meus Dados de Contato',
+            headerStyle: {
+              backgroundColor: '#f8f9fa',
+            },
+            headerTintColor: '#333',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
+          }} 
+        />
       </Stack>
     </>
   );
