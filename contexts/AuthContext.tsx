@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthService } from '../services/authService';
 import { AuthContextType, AuthState, LoginCredentials, RegisterCredentials } from '../types/auth';
+import { supabase } from '../services/supabase';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -67,10 +68,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signUp = async (credentials: RegisterCredentials) => {
+  const signUp = async (credentials: RegisterCredentials & {
+    type: 'user' | 'ong';
+    ong?: { name: string; description?: string; cnpj: string };
+  }) => {
     setAuthState(prev => ({ ...prev, loading: true }));
     try {
+      // 1 - Cria usuário no Supabase Auth
       const { user, session } = await AuthService.signUp(credentials);
+
+      if (!user) throw new Error('Erro ao criar usuário');
+
+      // 2 - Insere no profile
+      const { error: profileError } = await supabase.from('profiles').insert([
+        {
+          id: user.id,
+          email: user.email,
+          type: credentials.type,
+        },
+      ]);
+
+      if (profileError) throw profileError;
+
+      // 3 - Se for ONG, insere também em ongs
+      if (credentials.type === 'ong' && credentials.ong) {
+        const { error: ongError } = await supabase.from('ongs').insert([
+          {
+            user_id: user.id,
+            name: credentials.ong.name,
+            description: credentials.ong.description || null,
+            cnpj: credentials.ong.cnpj,
+          },
+        ]);
+
+        if (ongError) throw ongError;
+      }
+
       setAuthState({ user, session, loading: false });
     } catch (error) {
       setAuthState(prev => ({ ...prev, loading: false }));
@@ -99,4 +132,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}; 
+};

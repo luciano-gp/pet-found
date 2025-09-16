@@ -1,13 +1,14 @@
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Switch,
 } from 'react-native';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -18,6 +19,13 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isOng, setIsOng] = useState(false);
+
+  // Campos extras para ONG
+  const [ongName, setOngName] = useState('');
+  const [ongDescription, setOngDescription] = useState('');
+  const [ongCnpj, setOngCnpj] = useState('');
+
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
@@ -57,7 +65,21 @@ export default function RegisterScreen() {
     if (!validateForm()) return;
 
     try {
-      await signUp({ email, password });
+      await signUp({
+        email,
+        password,
+        type: isOng ? 'ong' : 'user',
+        ...(isOng
+          ? {
+              ong: {
+                name: ongName,
+                description: ongDescription,
+                cnpj: ongCnpj,
+              },
+            }
+          : {}),
+      });
+
       Alert.alert(
         'Sucesso',
         'Conta criada com sucesso! Você será redirecionado para a tela principal.',
@@ -69,7 +91,10 @@ export default function RegisterScreen() {
         ]
       );
     } catch (error) {
-      Alert.alert('Erro', error instanceof Error ? error.message : 'Erro ao criar conta');
+      Alert.alert(
+        'Erro',
+        error instanceof Error ? error.message : 'Erro ao criar conta'
+      );
     }
   };
 
@@ -81,9 +106,23 @@ export default function RegisterScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.content}>
           <Text style={styles.title}>Criar conta</Text>
-          <Text style={styles.subtitle}>Preencha os dados para se cadastrar</Text>
+          <Text style={styles.subtitle}>
+            Preencha os dados para se cadastrar
+          </Text>
 
           <View style={styles.form}>
+            {/* Toggle de tipo de conta */}
+            <View style={styles.toggleContainer}>
+              <Text style={styles.toggleLabel}>Usuário</Text>
+              <Switch
+                value={isOng}
+                onValueChange={setIsOng}
+                thumbColor={isOng ? '#007AFF' : '#f4f3f4'}
+                trackColor={{ false: '#767577', true: '#81b0ff' }}
+              />
+              <Text style={styles.toggleLabel}>ONG</Text>
+            </View>
+
             <Input
               label="Email"
               value={email}
@@ -111,11 +150,37 @@ export default function RegisterScreen() {
               error={errors.confirmPassword}
             />
 
+            {/* Campos extras aparecem só se for ONG */}
+            {isOng && (
+              <>
+                <Input
+                  label="Nome da ONG"
+                  value={ongName}
+                  onChangeText={setOngName}
+                  placeholder="Digite o nome da ONG"
+                />
+                <Input
+                  label="Descrição"
+                  value={ongDescription}
+                  onChangeText={setOngDescription}
+                  placeholder="Digite a descrição da ONG"
+                  multiline
+                />
+                <Input
+                  label="CNPJ"
+                  value={ongCnpj}
+                  onChangeText={setOngCnpj}
+                  placeholder="Digite o CNPJ"
+                />
+              </>
+            )}
+
             <Button
               title="Cadastrar"
               onPress={handleRegister}
               loading={loading}
               disabled={!email || !password || !confirmPassword}
+              variant="primary"
             />
 
             <View style={styles.footer}>
@@ -162,13 +227,21 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    color: '#333',
+    marginHorizontal: 8,
   },
   footer: {
     flexDirection: 'row',
@@ -184,4 +257,4 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-}); 
+});

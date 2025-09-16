@@ -1,7 +1,10 @@
+// types/auth.ts
+
 export interface User {
   id: string;
   email: string;
   created_at: string;
+  type?: 'user' | 'ong'; // <- Adicionado para diferenciar tipos de usuário (usuário normal e ONG)
 }
 
 export interface UserContact {
@@ -34,9 +37,16 @@ export interface LoginCredentials {
   password: string;
 }
 
+// Ajustado para suportar ONG também
 export interface RegisterCredentials {
   email: string;
   password: string;
+  type: 'user' | 'ong';
+  ong?: {
+    name: string;
+    description?: string;
+    cnpj: string;
+  };
 }
 
 export interface AuthContextType {
@@ -46,4 +56,4 @@ export interface AuthContextType {
   signIn: (credentials: LoginCredentials) => Promise<void>;
   signUp: (credentials: RegisterCredentials) => Promise<void>;
   signOut: () => Promise<void>;
-} 
+}
