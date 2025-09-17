@@ -42,11 +42,16 @@ export interface RegisterCredentials {
   email: string;
   password: string;
   type: 'user' | 'ong';
+  normalUser?: {
+    cpf: string;
+    birth_date: string;
+  };
   ong?: {
     name: string;
     description?: string;
     cnpj: string;
   };
+  fullName?: string; // opcional para dados comuns
 }
 
 export interface AuthContextType {
