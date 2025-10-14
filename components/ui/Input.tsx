@@ -4,13 +4,14 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 interface InputProps {
   label: string;
   value: string;
-  onChangeText: (text: string) => void;
+  onChangeText?: (text: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
   error?: string;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   multiline?: boolean;
   numberOfLines?: number;
+  editable?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({

@@ -9,10 +9,13 @@ import {
   Text,
   View,
   Switch,
+  Button as RNButton,
+  Pressable,
 } from 'react-native';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function RegisterScreen() {
   const { signUp, loading } = useAuth();
@@ -30,7 +33,8 @@ export default function RegisterScreen() {
 
   // Campos extras para usuário normal
   const [cpf, setCpf] = useState('');
-  const [birthDate, setBirthDate] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [errors, setErrors] = useState<{
     email?: string;
@@ -66,10 +70,14 @@ export default function RegisterScreen() {
         email,
         password,
         type: isOng ? 'ong' : 'user',
-        fullName: name, // dado comum para todos
         ...(isOng
-        ? { ong: { name, description: ongDescription, cnpj: ongCnpj } }
-        : { normalUser: { cpf, birth_date: birthDate } }),
+          ? { ong: { name, description: ongDescription, cnpj: ongCnpj } }
+          : {
+              normalUser: {
+                cpf,
+                birth_date: birthDate ? birthDate.toISOString().split('T')[0] : undefined,
+              },
+            }),
       });
 
       Alert.alert(
@@ -136,22 +144,36 @@ export default function RegisterScreen() {
             />
 
             {/* Campos extras aparecem conforme tipo */}
-            {isOng ? (
-              <>
-                <Input
-                  label="Descrição"
-                  value={ongDescription}
-                  onChangeText={setOngDescription}
-                  placeholder="Digite a descrição da ONG"
-                  multiline
-                />
-                <Input label="CNPJ" value={ongCnpj} onChangeText={setOngCnpj} placeholder="Digite o CNPJ" />
-              </>
-            ) : (
-              <>
-                <Input label="CPF" value={cpf} onChangeText={setCpf} placeholder="Digite seu CPF" />
-                <Input label="Data de Nascimento" value={birthDate} onChangeText={setBirthDate} placeholder="DD/MM/AAAA" />
-              </>
+            {!isOng && (
+  <>
+    <Input label="CPF" value={cpf} onChangeText={setCpf} placeholder="Digite seu CPF" />
+
+    <Pressable onPress={() => setShowDatePicker(true)}>
+      <View pointerEvents="none">
+        <Input
+          label="Data de Nascimento"
+          value={birthDate ? birthDate.toLocaleDateString('pt-BR') : ''}
+          placeholder="DD/MM/AAAA"
+          editable={false}
+        />
+      </View>
+    </Pressable>
+
+    {showDatePicker && (
+      <DateTimePicker
+        value={birthDate || new Date(2000, 0, 1)}
+        mode="date"
+        display="spinner"
+        maximumDate={new Date()}
+        onChange={(event, selectedDate) => {
+          setShowDatePicker(false);
+          if (event.type === 'set' && selectedDate) {
+            setBirthDate(selectedDate);
+          }
+        }}
+      />
+    )}
+  </>
             )}
 
             <Button

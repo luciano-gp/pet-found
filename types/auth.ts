@@ -44,7 +44,7 @@ export interface RegisterCredentials {
   type: 'user' | 'ong';
   normalUser?: {
     cpf: string;
-    birth_date: string;
+    birth_date?: string;
   };
   ong?: {
     name: string;
