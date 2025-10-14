@@ -33,40 +33,41 @@ static async signUp(credentials: RegisterCredentials & {
   ong?: { name: string; description?: string; cnpj: string }; // apenas ONG
 }): Promise<{ user: User; session: any }> {
   // 1 - Cria usuário no Supabase Auth
-  const { data, error } = await supabase.auth.signUp({
-    email: credentials.email,
-    password: credentials.password,
-  });
+const { data, error } = await supabase.auth.signUp({
+  email: credentials.email,
+  password: credentials.password,
+});
 
-  if (error) {
-    throw new Error(error.message);
-  }
+if (error) {
+  throw new Error(error.message);
+}
 
-  if (!data.user || !data.session) {
-    throw new Error('Falha no cadastro');
-  }
+if (!data.user || !data.session) {
+  throw new Error('Falha no cadastro');
+}
 
-  const user = {
-    id: data.user.id,
-    email: data.user.email!,
-    created_at: data.user.created_at,
-  };
+// Usa o e-mail do input diretamente
+const user = {
+  id: data.user.id,
+  email: credentials.email,
+  created_at: data.user.created_at,
+};
 
-  // 2 - Insere na tabela users (dados comuns)
-  const { error: userError } = await supabase.from('users').insert([{
-    id: user.id, // PK = auth.users.id
-    name: credentials.user?.name || '',
-    avatar_url: credentials.user?.avatar_url || null,
-    address: credentials.user?.address || null,
-  }]);
+// 2 - Insere na tabela users (dados comuns)
+const { error: userError } = await supabase.from('users').insert([{
+  id: user.id, // PK = auth.users.id
+  name: credentials.user?.name || '',
+  avatar_url: credentials.user?.avatar_url || null,
+  address: credentials.user?.address || null,
+}]);
 
-  if (userError) {
-    throw new Error(`Erro ao salvar na tabela users: ${userError.message}`);
-  }
+if (userError) {
+  throw new Error(`Erro ao salvar na tabela users: ${userError.message}`);
+}
 
-  // 3 - Se for usuário normal, insere na tabela normal_users
+  // 3 - Se for usuário normal, insere na tabela profiles
   if (credentials.type === 'user' && credentials.normalUser) {
-    const { error: normalUserError } = await supabase.from('normal_users').insert([{
+    const { error: normalUserError } = await supabase.from('profiles').insert([{
       user_id: user.id,
       cpf: credentials.normalUser.cpf || null,
       birth_date: credentials.normalUser.birth_date || null,
@@ -83,8 +84,7 @@ static async signUp(credentials: RegisterCredentials & {
       user_id: user.id,
       name: credentials.ong.name,
       description: credentials.ong.description || null,
-      cnpj: credentials.ong.cnpj,
-      social_reason: credentials.ong.name, // opcional, pode ajustar
+      cnpj: credentials.ong.cnpj
     }]);
 
     if (ongError) {
