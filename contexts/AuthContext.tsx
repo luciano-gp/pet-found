@@ -67,16 +67,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signUp = async (credentials: RegisterCredentials) => {
-    setAuthState(prev => ({ ...prev, loading: true }));
-    try {
-      const { user, session } = await AuthService.signUp(credentials);
-      setAuthState({ user, session, loading: false });
-    } catch (error) {
-      setAuthState(prev => ({ ...prev, loading: false }));
-      throw error;
-    }
-  };
+  const signUp = async (credentials: RegisterCredentials & {
+  type: 'user' | 'ong';
+  ong?: { name: string; description?: string; cnpj: string };
+}) => {
+  setAuthState(prev => ({ ...prev, loading: true }));
+  try {
+    const { user, session } = await AuthService.signUp(credentials);
+    setAuthState({ user, session, loading: false });
+  } catch (error) {
+    setAuthState(prev => ({ ...prev, loading: false }));
+    throw error;
+  }
+};
 
   const signOut = async () => {
     setAuthState(prev => ({ ...prev, loading: true }));
@@ -99,4 +102,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}; 
+};

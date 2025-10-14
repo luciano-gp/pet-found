@@ -1,13 +1,14 @@
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Switch,
 } from 'react-native';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -18,6 +19,19 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isOng, setIsOng] = useState(false);
+
+  // Campos comuns
+  const [name, setName] = useState('');
+
+  // Campos extras para ONG
+  const [ongDescription, setOngDescription] = useState('');
+  const [ongCnpj, setOngCnpj] = useState('');
+
+  // Campos extras para usuário normal
+  const [cpf, setCpf] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+
   const [errors, setErrors] = useState<{
     email?: string;
     password?: string;
@@ -31,23 +45,14 @@ export default function RegisterScreen() {
       confirmPassword?: string;
     } = {};
 
-    if (!email) {
-      newErrors.email = 'Email é obrigatório';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email inválido';
-    }
+    if (!email) newErrors.email = 'Email é obrigatório';
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email inválido';
 
-    if (!password) {
-      newErrors.password = 'Senha é obrigatória';
-    } else if (password.length < 6) {
-      newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
-    }
+    if (!password) newErrors.password = 'Senha é obrigatória';
+    else if (password.length < 6) newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
 
-    if (!confirmPassword) {
-      newErrors.confirmPassword = 'Confirme sua senha';
-    } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Senhas não coincidem';
-    }
+    if (!confirmPassword) newErrors.confirmPassword = 'Confirme sua senha';
+    else if (password !== confirmPassword) newErrors.confirmPassword = 'Senhas não coincidem';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -57,16 +62,20 @@ export default function RegisterScreen() {
     if (!validateForm()) return;
 
     try {
-      await signUp({ email, password });
+      await signUp({
+        email,
+        password,
+        type: isOng ? 'ong' : 'user',
+        fullName: name, // dado comum para todos
+        ...(isOng
+        ? { ong: { name, description: ongDescription, cnpj: ongCnpj } }
+        : { normalUser: { cpf, birth_date: birthDate } }),
+      });
+
       Alert.alert(
         'Sucesso',
         'Conta criada com sucesso! Você será redirecionado para a tela principal.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/(app)'),
-          },
-        ]
+        [{ text: 'OK', onPress: () => router.replace('/(app)') }]
       );
     } catch (error) {
       Alert.alert('Erro', error instanceof Error ? error.message : 'Erro ao criar conta');
@@ -84,6 +93,21 @@ export default function RegisterScreen() {
           <Text style={styles.subtitle}>Preencha os dados para se cadastrar</Text>
 
           <View style={styles.form}>
+            {/* Toggle de tipo de conta */}
+            <View style={styles.toggleContainer}>
+              <Text style={styles.toggleLabel}>Usuário</Text>
+              <Switch
+                value={isOng}
+                onValueChange={setIsOng}
+                thumbColor={isOng ? '#007AFF' : '#f4f3f4'}
+                trackColor={{ false: '#767577', true: '#81b0ff' }}
+              />
+              <Text style={styles.toggleLabel}>ONG</Text>
+            </View>
+
+            {/* Nome comum para todos */}
+            <Input label="Nome" value={name} onChangeText={setName} placeholder="Digite seu nome" />
+
             <Input
               label="Email"
               value={email}
@@ -111,11 +135,31 @@ export default function RegisterScreen() {
               error={errors.confirmPassword}
             />
 
+            {/* Campos extras aparecem conforme tipo */}
+            {isOng ? (
+              <>
+                <Input
+                  label="Descrição"
+                  value={ongDescription}
+                  onChangeText={setOngDescription}
+                  placeholder="Digite a descrição da ONG"
+                  multiline
+                />
+                <Input label="CNPJ" value={ongCnpj} onChangeText={setOngCnpj} placeholder="Digite o CNPJ" />
+              </>
+            ) : (
+              <>
+                <Input label="CPF" value={cpf} onChangeText={setCpf} placeholder="Digite seu CPF" />
+                <Input label="Data de Nascimento" value={birthDate} onChangeText={setBirthDate} placeholder="DD/MM/AAAA" />
+              </>
+            )}
+
             <Button
               title="Cadastrar"
               onPress={handleRegister}
               loading={loading}
-              disabled={!email || !password || !confirmPassword}
+              disabled={!email || !password || !confirmPassword || !name}
+              variant="primary"
             />
 
             <View style={styles.footer}>
@@ -132,56 +176,24 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  content: {
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
+  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  scrollContainer: { flexGrow: 1, justifyContent: 'center' },
+  content: { paddingHorizontal: 24, paddingVertical: 32 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#333', textAlign: 'center', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },
   form: {
     backgroundColor: '#fff',
     padding: 24,
     borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  link: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-}); 
+  toggleContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  toggleLabel: { fontSize: 16, color: '#333', marginHorizontal: 8 },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
+  footerText: { fontSize: 14, color: '#666' },
+  link: { fontSize: 14, color: '#007AFF', fontWeight: '600' },
+});
