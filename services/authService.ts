@@ -29,8 +29,8 @@ export class AuthService {
 static async signUp(credentials: RegisterCredentials & {
   type: 'user' | 'ong';
   user?: { name: string; avatar_url?: string; address?: string }; // dados comuns
-  normalUser?: { cpf?: string; birth_date?: string }; // apenas usuário normal
-  ong?: { name: string; description?: string; cnpj: string }; // apenas ONG
+  normalUser?: { cpf: string; birth_date?: string }; // apenas usuário normal
+  ong?: {  description?: string; cnpj: string }; // apenas ONG
 }): Promise<{ user: User; session: any }> {
   // 1 - Cria usuário no Supabase Auth
 const { data, error } = await supabase.auth.signUp({
@@ -55,8 +55,8 @@ const user = {
 
 // 2 - Insere na tabela users (dados comuns)
 const { error: userError } = await supabase.from('users').insert([{
-  id: user.id, // PK = auth.users.id
-  name: credentials.user?.name || '',
+  id: user.id,
+  name: credentials.fullname || '',
   avatar_url: credentials.user?.avatar_url || null,
   address: credentials.user?.address || null,
 }]);
@@ -82,9 +82,8 @@ if (userError) {
   if (credentials.type === 'ong' && credentials.ong) {
     const { error: ongError } = await supabase.from('ongs').insert([{
       user_id: user.id,
-      name: credentials.ong.name,
-      description: credentials.ong.description || null,
-      cnpj: credentials.ong.cnpj
+      description: credentials.ong?.description || null,
+      cnpj: credentials.ong?.cnpj
     }]);
 
     if (ongError) {

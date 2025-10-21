@@ -1,31 +1,31 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Link, router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  View,
   Switch,
-  Button as RNButton,
-  Pressable,
+  Text,
+  View
 } from 'react-native';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function RegisterScreen() {
+  // Campos comuns
+  const [name, setName] = useState('');
   const { signUp, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isOng, setIsOng] = useState(false);
 
-  // Campos comuns
-  const [name, setName] = useState('');
+  //State se é ou não ONG
+  const [isOng, setIsOng] = useState(false);
 
   // Campos extras para ONG
   const [ongDescription, setOngDescription] = useState('');
@@ -69,12 +69,16 @@ export default function RegisterScreen() {
       await signUp({
         email,
         password,
+        fullname: name,
         type: isOng ? 'ong' : 'user',
         ...(isOng
-          ? { ong: { name, description: ongDescription, cnpj: ongCnpj } }
+          ? { ong: 
+              {
+                description: ongDescription, 
+                cnpj: ongCnpj } }
           : {
               normalUser: {
-                cpf,
+                cpf: cpf,
                 birth_date: birthDate ? birthDate.toISOString().split('T')[0] : undefined,
               },
             }),
@@ -144,7 +148,20 @@ export default function RegisterScreen() {
             />
 
             {/* Campos extras aparecem conforme tipo */}
-            {!isOng && (
+            {isOng ? (
+              <>
+                <Input label="CNPJ" value={ongCnpj} onChangeText={setOngCnpj} placeholder="Digite o CNPJ" />
+
+                <Input
+                  label="Descrição"
+                  value={ongDescription}
+                  onChangeText={setOngDescription}
+                  placeholder="Digite a descrição da ONG"
+                  multiline
+                />
+                
+              </>
+            ) : (
   <>
     <Input label="CPF" value={cpf} onChangeText={setCpf} placeholder="Digite seu CPF" />
 

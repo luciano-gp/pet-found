@@ -69,7 +69,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUp = async (credentials: RegisterCredentials & {
   type: 'user' | 'ong';
-  ong?: { name: string; description?: string; cnpj: string };
+  ong?: { description?: string; cnpj: string };
+  user?: { name: string; cpf: string; birth_date: string};
 }) => {
   setAuthState(prev => ({ ...prev, loading: true }));
   try {
