@@ -59,6 +59,7 @@ const { error: userError } = await supabase.from('users').insert([{
   name: credentials.fullname || '',
   avatar_url: credentials.user?.avatar_url || null,
   address: credentials.user?.address || null,
+  is_ong: credentials.type === 'ong',
 }]);
 
 if (userError) {
