@@ -53,7 +53,7 @@ export default function ChatListScreen() {
     style={styles.chatItem}
     onPress={() =>
       router.push({
-        pathname: '/chat/[id]' as unknown as any,
+        pathname: '/chat/chatScreen',
         params: { id: item.id },
       })
     }

@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
@@ -6,13 +6,15 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  View
+  View,
 } from 'react-native';
 import { LostPetCard } from '../../../components/cards/LostPetCard';
 import { FilterBar } from '../../../components/ui/FilterBar';
 import { useLocation } from '../../../hooks/useLocation';
 import { LostPetsService } from '../../../services/lostPetsService';
 import { LostPet } from '../../../types/pet';
+import { ChatService } from '../../../services/chatService';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function ExploreLostPetsScreen() {
   const [lostPets, setLostPets] = useState<LostPet[]>([]);
@@ -22,6 +24,7 @@ export default function ExploreLostPetsScreen() {
   const [selectedSpecies, setSelectedSpecies] = useState('');
   const [sortBy, setSortBy] = useState<'nearest' | 'farthest'>('nearest');
   const { location, getCurrentLocation } = useLocation();
+  const { user } = useAuth();
 
   const loadLostPets = useCallback(async () => {
     try {
@@ -41,18 +44,16 @@ export default function ExploreLostPetsScreen() {
       const dLat = (lat2 - lat1) * (Math.PI / 180);
       const dLon = (lon2 - lon1) * (Math.PI / 180);
       const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.sin(dLat / 2) ** 2 +
         Math.cos(lat1 * (Math.PI / 180)) *
           Math.cos(lat2 * (Math.PI / 180)) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
+          Math.sin(dLon / 2) ** 2;
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     },
     []
   );
 
-  // Recarregar dados quando a tela receber foco
   useFocusEffect(
     useCallback(() => {
       loadLostPets();
@@ -61,26 +62,24 @@ export default function ExploreLostPetsScreen() {
 
   useEffect(() => {
     loadLostPets();
-    // Capturar localização apenas uma vez ao carregar a tela
     getCurrentLocation();
-  }, []); // Dependências vazias para executar apenas uma vez
+  }, []);
 
-  // Filtrar e ordenar pets perdidos
   useEffect(() => {
     let filtered = [...lostPets];
 
-    // Filtrar por espécie
     if (selectedSpecies) {
-      filtered = filtered.filter(lostPet => lostPet.species === selectedSpecies);
+      filtered = filtered.filter(
+        (lostPet) => lostPet.species === selectedSpecies
+      );
     }
 
-    // Ordenar por distância
     if (location && filtered.length > 0) {
       filtered.sort((a, b) => {
         if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) {
           return 0;
         }
-        
+
         const distanceA = calculateDistance(
           location.latitude,
           location.longitude,
@@ -107,6 +106,34 @@ export default function ExploreLostPetsScreen() {
     setRefreshing(false);
   };
 
+  const handleStartChat = async (lostPet: LostPet) => {
+    try {
+      if (!user) {
+        Alert.alert('Erro', 'Você precisa estar logado para iniciar um chat.');
+        return;
+      }
+
+      if (user.id === lostPet.user_id) {
+        Alert.alert('Aviso', 'Você não pode conversar consigo mesmo.');
+        return;
+      }
+
+      const chat = await ChatService.getOrCreateThread(user.id, lostPet.user_id);
+      if (!chat || !chat.id) {
+        throw new Error('Erro ao criar ou obter o chat.');
+      }
+
+      router.push({
+        pathname: '/chat/chatScreen',
+        params: { id: chat.id },
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar chat:', error);
+      Alert.alert('Erro', 'Não foi possível iniciar a conversa.');
+    }
+  };
+
+  // 🔹 Renderização do card
   const renderLostPet = useCallback(
     ({ item }: { item: LostPet }) => {
       let distance: number | undefined = undefined;
@@ -120,17 +147,18 @@ export default function ExploreLostPetsScreen() {
       }
 
       return (
-        <LostPetCard 
-          lostPet={item} 
+        <LostPetCard
+          lostPet={item}
           distance={distance}
-          onEdit={() => {}} // Não permitir edição em anúncios de outros usuários
-          onDelete={() => {}} // Não permitir exclusão em anúncios de outros usuários
-          showActions={false} // Não mostrar ações
-          showContactButton={true} // Mostrar botão de contato
+          onEdit={() => {}}
+          onDelete={() => {}}
+          showActions={false}
+          showContactButton={true}
+          onContactPress={() => handleStartChat(item)} // 🔹 integração do botão de chat
         />
       );
     },
-    [location, calculateDistance]
+    [location, calculateDistance, handleStartChat]
   );
 
   if (loading) {
@@ -149,7 +177,7 @@ export default function ExploreLostPetsScreen() {
         sortBy={sortBy}
         onSortChange={setSortBy}
       />
-      
+
       <FlatList
         data={filteredLostPets}
         renderItem={renderLostPet}
@@ -172,89 +200,19 @@ export default function ExploreLostPetsScreen() {
   );
 }
 
+// 🎨 Estilos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-  listContainer: {
-    padding: 16,
-  },
-  cardContainer: {
-    marginBottom: 16,
-  },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-  },
-  distanceText: {
-    fontSize: 14,
-    color: '#28a745',
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 64,
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  locationInfo: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-  },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  list: {
+    padding: 16,
   },
   emptyContainer: {
     flex: 1,
@@ -267,7 +225,4 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  list: {
-    padding: 16,
-  },
-}); 
+});
