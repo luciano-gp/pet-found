@@ -20,6 +20,7 @@ interface LostPetCardProps {
   showActions?: boolean;
   distance?: number;
   showContactButton?: boolean;
+  onContactPress?: () => void;
 }
 
 export const LostPetCard: React.FC<LostPetCardProps> = ({
@@ -29,29 +30,25 @@ export const LostPetCard: React.FC<LostPetCardProps> = ({
   showActions = true,
   distance,
   showContactButton = false,
+  onContactPress,
 }) => {
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [contact, setContact] = useState<UserContact | null>(null);
   const [loadingContact, setLoadingContact] = useState(false);
 
+  // Função para deletar anúncio
   const handleDelete = () => {
     Alert.alert(
       'Confirmar exclusão',
       'Tem certeza que deseja excluir este anúncio?',
       [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: () => onDelete(lostPet.id),
-        },
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: () => onDelete(lostPet.id) },
       ]
     );
   };
 
+  // Função para exibir dados de contato
   const handleShowContact = async () => {
     try {
       setLoadingContact(true);
@@ -65,6 +62,7 @@ export const LostPetCard: React.FC<LostPetCardProps> = ({
     }
   };
 
+  // Funções auxiliares de formatação
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', {
@@ -84,59 +82,71 @@ export const LostPetCard: React.FC<LostPetCardProps> = ({
   return (
     <View style={styles.card}>
       <Image source={{ uri: lostPet.image_url }} style={styles.image} />
-      
+
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.name}>{lostPet.name}</Text>
           <Text style={styles.species}>{lostPet.species}</Text>
         </View>
-        
+
         {lostPet.description && (
           <Text style={styles.description} numberOfLines={2}>
             {lostPet.description}
           </Text>
         )}
-        
+
         {lostPet.last_seen_name && (
           <View style={styles.locationContainer}>
             <Ionicons name="location" size={16} color="#666" />
             <Text style={styles.locationText}>{lostPet.last_seen_name}</Text>
           </View>
         )}
-        
+
         <View style={styles.footer}>
-          <Text style={styles.dateText}>
-            {formatDate(lostPet.created_at)}
-          </Text>
-          
+          <Text style={styles.dateText}>{formatDate(lostPet.created_at)}</Text>
+
           {lostPet.reward && (
             <View style={styles.rewardContainer}>
               <Ionicons name="cash" size={16} color="#28a745" />
               <Text style={styles.rewardText}>{formatReward(lostPet.reward)}</Text>
             </View>
           )}
-          
+
           {distance !== undefined && (
             <View style={styles.distanceContainer}>
               <Ionicons name="location" size={16} color="#28a745" />
               <Text style={styles.distanceText}>
-                {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
+                {distance < 1
+                  ? `${Math.round(distance * 1000)}m`
+                  : `${distance.toFixed(1)}km`}
               </Text>
             </View>
           )}
         </View>
 
         {showContactButton && (
-          <TouchableOpacity
-            style={styles.contactButton}
-            onPress={handleShowContact}
-            disabled={loadingContact}
-          >
-            <Ionicons name="call" size={16} color="#007AFF" />
-            <Text style={styles.contactButtonText}>
-              {loadingContact ? 'Carregando...' : 'Exibir contato'}
-            </Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.contactButton}
+              onPress={handleShowContact}
+              disabled={loadingContact}
+            >
+              <Ionicons name="call" size={16} color="#007AFF" />
+              <Text style={styles.contactButtonText}>
+                {loadingContact ? 'Carregando...' : 'Exibir contato'}
+              </Text>
+            </TouchableOpacity>
+
+            {onContactPress && (
+              <TouchableOpacity
+                style={styles.chatButton}
+                onPress={onContactPress}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+                <Text style={styles.chatButtonText}>Conversar</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </View>
 
@@ -148,7 +158,7 @@ export const LostPetCard: React.FC<LostPetCardProps> = ({
           >
             <Ionicons name="pencil" size={20} color="#007AFF" />
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={[styles.actionButton, styles.deleteButton]}
             onPress={handleDelete}
@@ -173,10 +183,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
@@ -296,4 +303,20 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginLeft: 4,
   },
-}); 
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  chatButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 6,
+  },
+});

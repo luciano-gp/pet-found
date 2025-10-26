@@ -76,7 +76,14 @@ export default function MenuScreen() {
       />
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <Text style={styles.title}>PetGuard</Text>
+          <View style={styles.headerTop}>
+            <Text style={styles.title}>PetGuard</Text>
+            <TouchableOpacity
+              style={styles.chatButton}
+              onPress={() => router.push('/chat' as any)}>
+              <Ionicons name="chatbubbles-outline" size={26} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.subtitle}>
             Ajude a encontrar pets perdidos e reporte pets avistados
           </Text>
@@ -308,5 +315,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginLeft: 12,
+  },
+
+  chatButton: {
+  backgroundColor: '#f1f3f5',
+  borderRadius: 20,
+  padding: 8,
+  elevation: 3,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.2,
+  shadowRadius: 2,
+  },
+  headerTop: {
+  width: '100%',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: 8,
   },
 }); 
