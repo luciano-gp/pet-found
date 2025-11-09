@@ -11,7 +11,7 @@ export interface ChatParticipant {
   id: string;
   thread_id: string;
   user_id: string;
-  user?: {
+  users?: {
     id: string;
     name: string;
     avatar_url?: string;

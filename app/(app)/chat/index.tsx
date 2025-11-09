@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ChatService } from '../../../services/chatService';
@@ -27,52 +27,56 @@ export default function ChatListScreen() {
       }
     };
 
-    // Carrega inicialmente
     fetchThreads();
 
-    // Configura o realtime (threads + mensagens)
     channels = ChatService.subscribeToThreads(user.id, async () => {
       const data = await ChatService.getUserThreads(user.id);
       setThreads(data);
     });
 
-    // Cleanup: remove canais Realtime
     return () => {
       if (channels) ChatService.unsubscribeFromThreads(channels);
     };
   }, [user]);
 
-  // Renderiza item da lista
-  const renderItem = ({ item }: { item: ChatThread }) => {
-    const otherParticipant = item.participants?.find((p) => p.user_id !== user?.id)?.user;
+  /**
+   * ITEM DA LISTA
+   */
+  function ChatListItem({ item }: { item: ChatThread }) {
+    const other = item.participants?.find((p) => p.user_id !== user?.id);
+
+    console.log("ITEM THREAD:", item);
+    console.log("OTHER PARTICIPANT:", other);
+
+    const name = other?.users?.name ?? 'Usuário Desconhecido';
+    const avatar = other?.users?.avatar_url ?? "https://placehold.co/50x50";
+
     const lastMessageText =
-      item.last_message?.content || (item.last_message?.image_url ? '📷 Imagem enviada' : 'Sem mensagens');
+      item.last_message?.content ||
+      (item.last_message?.image_url ? "📷 Imagem enviada" : "Sem mensagens");
 
     return (
       <Pressable
-    style={styles.chatItem}
-    onPress={() =>
-      router.push({
-        pathname: '/chat/chatScreen',
-        params: { id: item.id },
-      })
-    }
-  >
-        <Image
-          source={{ uri: otherParticipant?.avatar_url || 'https://placehold.co/50x50' }}
-          style={styles.avatar}
-        />
+        style={styles.chatItem}
+        onPress={() =>
+          router.push({
+            pathname: "/chat/chatScreen",
+            params: { id: item.id },
+          })
+        }
+      >
+        <Image source={{ uri: avatar }} style={styles.avatar} />
+
         <View style={styles.chatInfo}>
-          <Text style={styles.name}>{otherParticipant?.name || 'Usuário desconhecido'}</Text>
+          <Text style={styles.name}>{name}</Text>
           <Text style={styles.lastMessage} numberOfLines={1}>
             {lastMessageText}
           </Text>
         </View>
       </Pressable>
     );
-  };
+  }
 
-  // Estados da UI
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -94,7 +98,7 @@ export default function ChatListScreen() {
       <FlatList
         data={threads}
         keyExtractor={(item) => item.id}
-        renderItem={renderItem}
+        renderItem={({ item }) => <ChatListItem item={item} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 20 }}
       />
@@ -102,48 +106,48 @@ export default function ChatListScreen() {
   );
 }
 
-// 💅 Estilos
+// Estilos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingTop: 16,
   },
   chatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   avatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
     marginRight: 12,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: "#f3f4f6",
   },
   chatInfo: {
     flex: 1,
   },
   name: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
+    fontWeight: "600",
+    color: "#111827",
   },
   lastMessage: {
     fontSize: 14,
-    color: '#6b7280',
+    color: "#6b7280",
     marginTop: 2,
   },
   centered: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: "#6b7280",
   },
 });

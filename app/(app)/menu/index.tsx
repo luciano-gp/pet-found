@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../../contexts/AuthContext';
+import { UserDataService } from '../../../services/userDataService';
 
 const MenuItem: React.FC<{
   title: string;
@@ -35,6 +36,7 @@ const MenuItem: React.FC<{
 
 export default function MenuScreen() {
   const { user, signOut } = useAuth();
+  const [userName, setUserName] = React.useState<string | null>(null);
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -42,6 +44,24 @@ export default function MenuScreen() {
       StatusBar.setBarStyle('dark-content');
     }
   }, []);
+
+  useEffect(() => {
+    async function loadUserData() {
+      try {
+        if (!user?.id) return;
+
+        const userData = await UserDataService.getUserDataById(user.id);
+
+        if (userData) {
+          setUserName(userData.name);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados do usuário:', error);
+      }
+    }
+
+    loadUserData();
+  }, [user]);
 
   const handleSignOut = () => {
     Alert.alert(
@@ -87,7 +107,7 @@ export default function MenuScreen() {
           <Text style={styles.subtitle}>
             Ajude a encontrar pets perdidos e reporte pets avistados
           </Text>
-          <Text style={styles.userInfo}>Olá, {user?.email}</Text>
+          <Text style={styles.userInfo}>Olá, {userName ?? 'Carregando...'}</Text>
         </View>
 
         <View style={styles.menuSection}>

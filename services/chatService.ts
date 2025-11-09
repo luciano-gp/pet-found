@@ -2,19 +2,40 @@ import { ChatMessage, ChatThread, CreateMessageData, CreateThreadData } from '..
 import { supabase } from './supabase';
 
 export class ChatService {
-  /**
-   * Lista todas as threads (conversas) do usuário
-   */
-  static async getUserThreads(userId: string): Promise<ChatThread[]> {
-    const { data, error } = await supabase
-      .from('chat_threads')
+
+
+static async getUserThreads(userId: string): Promise<ChatThread[]> {
+  try {
+    console.log("[DEBUG] === getUserThreads() INIT ===");
+
+    // 1) Buscar IDs das threads onde o usuário participa
+    const { data: participantRows, error: partError } = await supabase
+      .from("chat_participants")
+      .select("thread_id")
+      .eq("user_id", userId);
+
+    if (partError) throw partError;
+
+    const participantThreadIds = (participantRows || []).map((r) => r.thread_id);
+
+    console.log("[DEBUG] THREADS ONDE USUARIO PARTICIPA:", participantThreadIds);
+
+    // 2) Buscar threads criadas pelo usuário
+    const { data: byCreator, error: errCreator } = await supabase
+      .from("chat_threads")
       .select(`
         id,
         created_at,
         created_by,
-        chat_participants!inner(
+        chat_participants(
+          thread_id,
           user_id,
-          users!chat_participants_user_id_fkey(id, name, avatar_url, is_ong)
+          users (
+            id,
+            name,
+            avatar_url,
+            is_ong
+          )
         ),
         chat_messages(
           id,
@@ -23,130 +44,89 @@ export class ChatService {
           created_at
         )
       `)
-      .eq('chat_participants.user_id', userId)
-      .order('created_at', { ascending: false });
+      .eq("created_by", userId)
+      .order("created_at", { ascending: false });
 
-    if (error) throw new Error(error.message);
+    if (errCreator) throw errCreator;
 
-    const formatted: ChatThread[] = (data || []).map((thread: any) => {
-      const lastMessage = thread.chat_messages?.[thread.chat_messages.length - 1] || null;
+    // 3) Buscar threads onde o usuário é participante
+    let byParticipant: any[] = [];
+
+    if (participantThreadIds.length > 0) {
+      const { data: byPart, error: errPart } = await supabase
+        .from("chat_threads")
+        .select(`
+          id,
+          created_at,
+          created_by,
+          chat_participants(
+            thread_id,
+            user_id,
+            users (
+              id,
+              name,
+              avatar_url,
+              is_ong
+            )
+          ),
+          chat_messages(
+            id,
+            content,
+            image_url,
+            created_at
+          )
+        `)
+        .in("id", participantThreadIds)
+        .order("created_at", { ascending: false });
+
+      if (errPart) throw errPart;
+      byParticipant = byPart || [];
+    }
+
+    // 4) Merge sem duplicar
+    const map = new Map();
+    [...(byCreator ?? []), ...(byParticipant ?? [])].forEach((thread) => {
+      if (!map.has(thread.id)) {
+        map.set(thread.id, thread);
+      }
+    });
+
+    const merged = Array.from(map.values());
+
+    console.log("[DEBUG] THREADS MERGED:", merged);
+
+    // 5) Format final
+    const formatted: ChatThread[] = merged.map((thread: any) => {
+      const lastMessage =
+        thread.chat_messages?.[thread.chat_messages.length - 1] || null;
+
       return {
         id: thread.id,
         created_at: thread.created_at,
-        participants: thread.chat_participants.map((p: any) => ({
-          thread_id: thread.id,
-          user_id: p.user_id,
-          user: p.users,
-        })),
         last_message: lastMessage,
+        participants: thread.chat_participants || [],
       };
     });
 
+    console.log("[DEBUG] FINAL THREADS:", formatted);
+
     return formatted;
-  }
-
-  /**
-   * Busca ou cria uma thread (conversa) entre dois usuários
-   */
-  static async getOrCreateThread(userAId: string, userBId: string): Promise<ChatThread> {
-  try {
-    // 🔹 0. Obtem a sessão atual (auth.uid() no servidor depende disso)
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-    console.log('[DEBUG] ===== getOrCreateThread() =====');
-    console.log('[DEBUG] sessionError:', sessionError);
-    console.log('[DEBUG] sessionData:', JSON.stringify(sessionData, null, 2));
-
-    const sessionUserId = sessionData?.session?.user?.id;
-    console.log('[DEBUG] sessionUserId (auth.uid):', sessionUserId);
-    console.log('[DEBUG] Params -> userAId:', userAId, '| userBId:', userBId);
-
-    if (!sessionUserId) {
-      throw new Error(
-        'Usuário não autenticado. auth.getSession() retornou null — o token JWT pode estar ausente.'
-      );
-    }
-
-    // 🔹 1. Verifica se já existe uma thread entre os dois usuários
-    const { data: existingThreads, error: searchError } = await supabase
-      .from('chat_threads')
-      .select(`
-        id,
-        created_at,
-        chat_participants(user_id)
-      `);
-
-    if (searchError) {
-      console.error('[DEBUG] Erro ao buscar threads existentes:', searchError);
-      throw new Error(searchError.message);
-    }
-
-    const thread = (existingThreads || []).find((t: any) => {
-      const participants = t.chat_participants.map((p: any) => p.user_id);
-      return (
-        participants.includes(userAId) &&
-        participants.includes(userBId) &&
-        participants.length === 2
-      );
-    });
-
-    if (thread) {
-      console.log('[DEBUG] Thread existente encontrada:', thread.id);
-      return thread;
-    }
-
-    // 🔹 2. Cria uma nova thread
-    console.log('[DEBUG] Nenhuma thread existente. Criando nova...');
-    console.log('[DEBUG] Inserindo com created_by =', sessionUserId);
-
-    const { data: newThread, error: createError } = await supabase
-      .from('chat_threads')
-      .insert([{ created_at: new Date().toISOString(), created_by: sessionUserId }])
-      .select()
-      .single();
-
-    console.log('[DEBUG] Resultado insert thread:', newThread, createError);
-
-    if (createError || !newThread) {
-      console.error('[ChatService] Erro ao criar thread:', createError);
-      throw new Error(createError?.message || 'Erro ao criar thread');
-    }
-
-    const threadId = newThread.id;
-
-    // 🔹 3. Cria os participantes
-    console.log('[DEBUG] Inserindo participantes:', userAId, userBId);
-    const { error: participantsError } = await supabase.from('chat_participants').insert([
-      { thread_id: threadId, user_id: userAId },
-      { thread_id: threadId, user_id: userBId },
-    ]);
-
-    if (participantsError) {
-      console.error('[DEBUG] Erro ao inserir participantes:', participantsError);
-      throw new Error(participantsError.message);
-    }
-
-    console.log('[DEBUG] Thread criada com sucesso! ID:', threadId);
-
-    return {
-      id: threadId,
-      created_at: newThread.created_at,
-    };
   } catch (error) {
-    console.error('[ChatService] getOrCreateThread error:', error);
+    console.error("[ChatService] getUserThreads ERROR:", error);
     throw error;
   }
 }
 
+
   /**
-   * Cria uma nova thread (conversa) com participantes
+   * CRIA UMA THREAD COM LISTA DE PARTICIPANTES
    */
   static async createThread({ participant_ids }: CreateThreadData): Promise<ChatThread> {
     if (!participant_ids || participant_ids.length === 0) {
       throw new Error('Lista de participantes inválida');
     }
 
-    const createdBy = participant_ids[0]; // 🧠 Define o criador como o primeiro participante
+    const createdBy = participant_ids[0];
 
     const { data, error } = await supabase
       .from('chat_threads')
@@ -154,7 +134,7 @@ export class ChatService {
       .select()
       .single();
 
-    if (error || !data) throw new Error(error?.message || 'Erro ao criar thread');
+    if (error || !data) throw error;
 
     const threadId = data.id;
 
@@ -165,13 +145,13 @@ export class ChatService {
       }))
     );
 
-    if (participantsError) throw new Error(participantsError.message);
+    if (participantsError) throw participantsError;
 
     return { id: threadId, created_at: data.created_at };
   }
 
   /**
-   * Envia uma mensagem (texto ou imagem)
+   * ENVIA UMA MENSAGEM
    */
   static async sendMessage({
     thread_id,
@@ -192,12 +172,12 @@ export class ChatService {
       .select('id, thread_id, sender_id, content, image_url, created_at')
       .single();
 
-    if (error || !data) throw new Error(error?.message || 'Erro ao enviar mensagem');
+    if (error || !data) throw error;
     return data;
   }
 
   /**
-   * Lista as mensagens de uma thread específica
+   * LISTA MENSAGENS DE UM CHAT
    */
   static async getMessages(threadId: string): Promise<ChatMessage[]> {
     const { data, error } = await supabase
@@ -209,21 +189,21 @@ export class ChatService {
         content,
         image_url,
         created_at,
-        users!chat_messages_sender_id_fkey(id, name, avatar_url)
+        users(id, name, avatar_url)
       `)
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true });
 
-    if (error) throw new Error(error.message);
+    if (error) throw error;
 
-    return (data || []).map((msg: any) => ({
+    return (data ?? []).map((msg: any) => ({
       ...msg,
       sender: msg.users,
     }));
   }
 
   /**
-   * Inscrição no Realtime para novas mensagens em uma thread
+   * SUBSCRIBE MENSAGENS
    */
   static subscribeToMessages(threadId: string, onNewMessage: (msg: ChatMessage) => void) {
     const channel = supabase
@@ -237,8 +217,7 @@ export class ChatService {
           filter: `thread_id=eq.${threadId}`,
         },
         (payload) => {
-          const msg = payload.new as ChatMessage;
-          onNewMessage(msg);
+          onNewMessage(payload.new as ChatMessage);
         }
       )
       .subscribe();
@@ -247,7 +226,7 @@ export class ChatService {
   }
 
   /**
-   * Inscrição no Realtime para atualizações gerais de threads
+   * SUBSCRIBE THREADS
    */
   static subscribeToThreads(userId: string, onChange: () => void) {
     const messagesChannel = supabase
@@ -255,10 +234,7 @@ export class ChatService {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-        (payload) => {
-          console.log('[Realtime] Nova mensagem:', payload);
-          onChange();
-        }
+        onChange
       )
       .subscribe();
 
@@ -267,10 +243,7 @@ export class ChatService {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_threads' },
-        (payload) => {
-          console.log('[Realtime] Nova thread:', payload);
-          onChange();
-        }
+        onChange
       )
       .subscribe();
 
@@ -278,7 +251,7 @@ export class ChatService {
   }
 
   /**
-   * Cancela inscrições Realtime (boa prática)
+   * UNSUBSCRIBE
    */
   static unsubscribeFromThreads(channels: { messagesChannel: any; threadsChannel: any }) {
     supabase.removeChannel(channels.messagesChannel);
