@@ -156,6 +156,22 @@ export default function MenuScreen() {
             color="#4ecdc4"
             onPress={() => router.push('/map' as any)}
           />
+
+          <MenuItem
+            title="Explorar Pets para Adoção"
+            subtitle="Veja os pets próximos para a adoção"
+            icon="paw"
+            color="#df99cc"
+            onPress={() => router.push('/explore-adoption-pets' as any)}
+          />
+
+          <MenuItem
+            title="Explorar Campanhas"
+            subtitle="Veja as campanhas disponíveis"
+            icon="ribbon-outline"
+            color="#FFC300"
+            onPress={() => router.push('/explore-campaigns' as any)}
+          />
         </View>
 
         <View style={styles.menuSection}>
@@ -176,6 +192,24 @@ export default function MenuScreen() {
             color="#5856d6"
             onPress={() => router.push('/lost-pets' as any)}
           />
+
+          <MenuItem
+            title="Ver Meus Pets para Adoção"
+            subtitle="Visualize e gerencie seus pets para adoção"
+            icon="paw"
+            color="#df99cc"
+            onPress={() => router.push('/adoption-pets' as any)}
+          />
+
+          {user?.type == 'ong' && (
+            <MenuItem
+            title="Ver Minhas Campanhas"
+            subtitle="Visualize e gerencie suas campanhas"
+            icon="ribbon-outline"
+            color="#FFC300"
+            onPress={() => router.push('/campaigns' as any)}
+            />
+          )}
         </View>
 
         <View style={styles.menuSection}>

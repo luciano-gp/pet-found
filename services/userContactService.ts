@@ -114,4 +114,17 @@ export const UserContactService = {
       throw error;
     }
   },
+
+  // Obter contato de um usuário específico pelo id da ONG
+  async getUserContactByOngId(ongId: string) {
+    const { data: ong } = await supabase
+      .from('ongs')
+      .select('user_id')
+      .eq('id', ongId)
+      .single();
+  
+    if (!ong) throw new Error('ONG não encontrada');
+  
+    return await this.getUserContactById(ong.user_id);
+  },
 }; 
