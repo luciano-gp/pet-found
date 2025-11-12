@@ -1,17 +1,19 @@
-import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
-  View
+  View,
 } from 'react-native';
 import { AdoptionPetCard } from '../../../components/cards/AdoptionPetCard';
 import { FilterBar } from '../../../components/ui/FilterBar';
+import { useAuth } from '../../../contexts/AuthContext'; // 🔹 necessário para obter o user logado
 import { useLocation } from '../../../hooks/useLocation';
 import { AdoptionPetsService } from '../../../services/adoptionPetsService';
+import { ChatService } from '../../../services/chatService';
 import { AdoptionPet } from '../../../types/adoptionPet';
 
 export default function ExploreAdoptionPetsScreen() {
@@ -22,12 +24,15 @@ export default function ExploreAdoptionPetsScreen() {
   const [selectedSpecies, setSelectedSpecies] = useState('');
   const [sortBy, setSortBy] = useState<'nearest' | 'farthest'>('nearest');
   const { location, getCurrentLocation } = useLocation();
+  const { user } = useAuth();
+  const router = useRouter();
 
+  // 📍 Carregar pets disponíveis
   const loadAdoptionPets = useCallback(async () => {
     try {
       setLoading(true);
       const allPets = await AdoptionPetsService.getAllAvailablePets();
-      setAdoptionPets(allPets.filter(p => !p.adopted)); // mostrar apenas não adotados
+      setAdoptionPets(allPets.filter((p) => !p.adopted)); // mostra apenas não adotados
     } catch {
       Alert.alert('Erro', 'Erro ao carregar pets para adoção');
     } finally {
@@ -35,9 +40,10 @@ export default function ExploreAdoptionPetsScreen() {
     }
   }, []);
 
+  // 📏 Cálculo de distância
   const calculateDistance = useCallback(
     (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-      const R = 6371; // Raio da Terra em km
+      const R = 6371; // km
       const dLat = (lat2 - lat1) * (Math.PI / 180);
       const dLon = (lon2 - lon1) * (Math.PI / 180);
       const a =
@@ -51,28 +57,27 @@ export default function ExploreAdoptionPetsScreen() {
     []
   );
 
-  // Recarrega quando a tela volta ao foco
+  // 🔁 Recarrega quando a tela volta ao foco
   useFocusEffect(
     useCallback(() => {
       loadAdoptionPets();
     }, [loadAdoptionPets])
   );
 
+  // 🧭 Carrega pets e localização ao montar
   useEffect(() => {
     loadAdoptionPets();
-    getCurrentLocation(); // captura localização uma vez
+    getCurrentLocation();
   }, []);
 
-  // Filtrar e ordenar pets
+  // 🔹 Filtro e ordenação
   useEffect(() => {
     let filtered = [...adoptionPets];
 
-    // Filtrar por espécie
     if (selectedSpecies) {
-      filtered = filtered.filter(p => p.pet_specie === selectedSpecies);
+      filtered = filtered.filter((p) => p.pet_specie === selectedSpecies);
     }
 
-    // Ordenar por distância
     if (location && filtered.length > 0) {
       filtered.sort((a, b) => {
         if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) return 0;
@@ -103,6 +108,38 @@ export default function ExploreAdoptionPetsScreen() {
     setRefreshing(false);
   };
 
+  // 💬 Função de iniciar conversa
+  const handleStartChat = async (pet: AdoptionPet) => {
+    try {
+      if (!user) {
+        Alert.alert('Erro', 'Você precisa estar logado para iniciar um chat.');
+        return;
+      }
+
+      if (user.id === pet.user_id) {
+        Alert.alert('Aviso', 'Você não pode conversar consigo mesmo.');
+        return;
+      }
+
+      const chat = await ChatService.createThread({
+        participant_ids: [user.id, pet.user_id],
+      });
+
+      if (!chat || !chat.id) {
+        throw new Error('Erro ao criar ou obter o chat.');
+      }
+
+      router.push({
+        pathname: '/chat/chatScreen',
+        params: { id: chat.id },
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar chat:', error);
+      Alert.alert('Erro', 'Não foi possível iniciar a conversa.');
+    }
+  };
+
+  // 🐾 Renderização dos cards
   const renderPet = useCallback(
     ({ item }: { item: AdoptionPet }) => {
       let distance: number | undefined = undefined;
@@ -121,10 +158,11 @@ export default function ExploreAdoptionPetsScreen() {
           distance={distance}
           showContactButton={true}
           showActions={false}
+          onContactPress={() => handleStartChat(item)} // ✅ botão "Conversar"
         />
       );
     },
-    [location, calculateDistance]
+    [location, calculateDistance, user]
   );
 
   if (loading) {

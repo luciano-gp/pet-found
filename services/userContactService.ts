@@ -8,6 +8,7 @@ export const UserContactService = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+
       const { data, error } = await supabase
         .from('user_contacts')
         .select('*')
@@ -31,6 +32,10 @@ export const UserContactService = {
 
   // Obter contato de um usuário específico
   async getUserContactById(userId: string): Promise<UserContact | null> {
+
+    
+  console.log('Usuario utilizado para buscar o contato 2:', userId)
+
     try {
       const { data, error } = await supabase
         .from('user_contacts')
@@ -117,6 +122,9 @@ export const UserContactService = {
 
   // Obter contato de um usuário específico pelo id da ONG
   async getUserContactByOngId(ongId: string) {
+
+      console.log('Usuario utilizado para buscar o contato:', ongId)
+
     const { data: ong } = await supabase
       .from('ongs')
       .select('user_id')

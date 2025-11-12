@@ -122,33 +122,75 @@ static async getUserThreads(userId: string): Promise<ChatThread[]> {
    * CRIA UMA THREAD COM LISTA DE PARTICIPANTES
    */
   static async createThread({ participant_ids }: CreateThreadData): Promise<ChatThread> {
-    if (!participant_ids || participant_ids.length === 0) {
-      throw new Error('Lista de participantes inválida');
-    }
-
-    const createdBy = participant_ids[0];
-
-    const { data, error } = await supabase
-      .from('chat_threads')
-      .insert([{ created_at: new Date().toISOString(), created_by: createdBy }])
-      .select()
-      .single();
-
-    if (error || !data) throw error;
-
-    const threadId = data.id;
-
-    const { error: participantsError } = await supabase.from('chat_participants').insert(
-      participant_ids.map((user_id) => ({
-        thread_id: threadId,
-        user_id,
-      }))
-    );
-
-    if (participantsError) throw participantsError;
-
-    return { id: threadId, created_at: data.created_at };
+  if (!participant_ids || participant_ids.length < 2) {
+    throw new Error('É necessário informar dois participantes.');
   }
+
+  const [userA, userB] = participant_ids;
+
+  console.log('🔍 Verificando se já existe um chat entre:', userA, 'e', userB);
+
+  // 1️⃣ Busca threads que contenham ambos os usuários
+  const { data: existingThreads, error: fetchError } = await supabase
+    .from('chat_participants')
+    .select('thread_id')
+    .in('user_id', [userA, userB]);
+
+  if (fetchError) throw new Error(`Erro ao buscar threads existentes: ${fetchError.message}`);
+
+  if (existingThreads && existingThreads.length > 0) {
+    // Agrupa os threads encontrados
+    const threadIds = existingThreads.map((t) => t.thread_id);
+
+    // Conta quantos participantes cada thread tem
+    const { data: fullThreads, error: threadsError } = await supabase
+      .from('chat_participants')
+      .select('thread_id, user_id')
+      .in('thread_id', threadIds);
+
+    if (threadsError) throw threadsError;
+
+    // Verifica se existe uma thread com os dois usuários exatamente
+    const existingThread = fullThreads?.find((thread) => {
+      const participants = fullThreads
+        .filter((t) => t.thread_id === thread.thread_id)
+        .map((t) => t.user_id);
+      return participants.includes(userA) && participants.includes(userB) && participants.length === 2;
+    });
+
+    if (existingThread) {
+      console.log('✅ Chat já existente encontrado:', existingThread.thread_id);
+      return { id: existingThread.thread_id, created_at: new Date().toISOString() };
+    }
+  }
+
+  console.log('🆕 Nenhum chat existente encontrado, criando novo...');
+
+  // 2️⃣ Cria nova thread
+  const { data, error } = await supabase
+    .from('chat_threads')
+    .insert([{ created_at: new Date().toISOString(), created_by: userA }])
+    .select()
+    .single();
+
+  if (error || !data) throw error;
+
+  const threadId = data.id;
+
+  // 3️⃣ Adiciona participantes
+  const { error: participantsError } = await supabase.from('chat_participants').insert(
+    participant_ids.map((user_id) => ({
+      thread_id: threadId,
+      user_id,
+    }))
+  );
+
+  if (participantsError) throw participantsError;
+
+  console.log('✅ Novo chat criado:', threadId);
+
+  return { id: threadId, created_at: data.created_at };
+}
 
   /**
    * ENVIA UMA MENSAGEM

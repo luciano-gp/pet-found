@@ -1,7 +1,7 @@
 import { UserContactService } from '@/services/userContactService';
 import { UserContact } from '@/types/auth';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AdoptionPet } from '../../types/adoptionPet';
 import { ContactModal } from '../ui/ContactModal';
@@ -14,6 +14,7 @@ interface Props {
   onButtonClick?: (pet: AdoptionPet) => void;
   onEdit?: (pet: AdoptionPet) => void;
   onDelete?: (id: string) => void;
+  onContactPress?: () => void;
 }
 
 export function AdoptionPetCard({
@@ -23,6 +24,7 @@ export function AdoptionPetCard({
   showActions,
   onEdit,
   onDelete,
+  onContactPress,
 }: Props) {
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [contact, setContact] = useState<UserContact | null>(null);
@@ -111,6 +113,16 @@ export function AdoptionPetCard({
           </TouchableOpacity>
         )}
 
+        {onContactPress && (
+              <TouchableOpacity
+                style={styles.chatButton}
+                onPress={onContactPress}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+                <Text style={styles.chatButtonText}>Conversar</Text>
+              </TouchableOpacity>
+        )}
+
         {showActions && (
           <View style={styles.actions}>
           <TouchableOpacity
@@ -140,6 +152,24 @@ export function AdoptionPetCard({
 }
 
 const styles = StyleSheet.create({
+
+  chatButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#007AFF',
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 10,
+  marginTop: 10,
+},
+chatButtonText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 14,
+  marginLeft: 6,
+},
+
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,

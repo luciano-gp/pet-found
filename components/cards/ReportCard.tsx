@@ -20,6 +20,7 @@ interface ReportCardProps {
   showActions?: boolean;
   distance?: number;
   showContactButton?: boolean;
+  onContactPress?: () => void;
 }
 
 export const ReportCard: React.FC<ReportCardProps> = ({
@@ -29,6 +30,7 @@ export const ReportCard: React.FC<ReportCardProps> = ({
   showActions = true,
   distance,
   showContactButton = false,
+  onContactPress,
 }) => {
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [contact, setContact] = useState<UserContact | null>(null);
@@ -118,6 +120,16 @@ export const ReportCard: React.FC<ReportCardProps> = ({
             </Text>
           </TouchableOpacity>
         )}
+
+        {onContactPress && (
+              <TouchableOpacity
+                style={styles.chatButton}
+                onPress={onContactPress}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+                <Text style={styles.chatButtonText}>Conversar</Text>
+              </TouchableOpacity>
+        )}
       </View>
 
       {showActions && (
@@ -148,6 +160,24 @@ export const ReportCard: React.FC<ReportCardProps> = ({
 };
 
 const styles = StyleSheet.create({
+
+  chatButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#007AFF',
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 10,
+  marginTop: 10,
+},
+chatButtonText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 14,
+  marginLeft: 6,
+},
+
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,

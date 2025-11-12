@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -99,7 +99,7 @@ export default function CreateLostPetScreen() {
 
       console.log('Iniciando upload da imagem...');
       // Upload da imagem
-      const imageUrl = await StorageService.uploadImage(imageUri!, 'lost-pet');
+      const imageUrl = await StorageService.uploadImage(imageUri!, 'pet-image');
       console.log('Imagem enviada com sucesso:', imageUrl);
 
       console.log('Criando anúncio...');

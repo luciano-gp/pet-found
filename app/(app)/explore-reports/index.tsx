@@ -1,5 +1,5 @@
-import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -11,7 +11,9 @@ import {
 import { ReportCard } from '../../../components/cards/ReportCard';
 import { FilterBar } from '../../../components/ui/FilterBar';
 import { useLocation } from '../../../hooks/useLocation';
+import { ChatService } from '../../../services/chatService';
 import { ReportsService } from '../../../services/reportsService';
+import { supabase } from '../../../services/supabase';
 import { Report } from '../../../types/pet';
 
 export default function ExploreReportsScreen() {
@@ -22,6 +24,15 @@ export default function ExploreReportsScreen() {
   const [selectedSpecies, setSelectedSpecies] = useState('');
   const [sortBy, setSortBy] = useState<'nearest' | 'farthest'>('nearest');
   const { location, getCurrentLocation } = useLocation();
+  const [user, setUser] = useState<any>(null);
+
+  // 🔹 Captura o usuário logado
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      setUser(data.user);
+    })();
+  }, []);
 
   const loadReports = useCallback(async () => {
     try {
@@ -35,24 +46,38 @@ export default function ExploreReportsScreen() {
     }
   }, []);
 
-  const calculateDistance = useCallback(
-    (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-      const R = 6371; // Raio da Terra em km
-      const dLat = (lat2 - lat1) * (Math.PI / 180);
-      const dLon = (lon2 - lon1) * (Math.PI / 180);
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) *
-          Math.cos(lat2 * (Math.PI / 180)) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    },
-    []
-  );
+  // 🔹 Função para iniciar chat
+  const handleStartChat = async (report: Report) => {
+    try {
+      if (!user) {
+        Alert.alert('Erro', 'Você precisa estar logado para iniciar um chat.');
+        return;
+      }
 
-  // Recarregar dados quando a tela receber foco
+      if (user.id === report.user_id) {
+        Alert.alert('Aviso', 'Você não pode conversar consigo mesmo.');
+        return;
+      }
+
+      const chat = await ChatService.createThread({
+        participant_ids: [user.id, report.user_id],
+      });
+
+      if (!chat || !chat.id) {
+        throw new Error('Erro ao criar ou obter o chat.');
+      }
+
+      router.push({
+        pathname: '/chat/chatScreen',
+        params: { id: chat.id },
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar chat:', error);
+      Alert.alert('Erro', 'Não foi possível iniciar a conversa.');
+    }
+  };
+
+  // 🔹 Recarregar dados quando a tela receber foco
   useFocusEffect(
     useCallback(() => {
       loadReports();
@@ -61,11 +86,10 @@ export default function ExploreReportsScreen() {
 
   useEffect(() => {
     loadReports();
-    // Capturar localização apenas uma vez ao carregar a tela
-    getCurrentLocation();
-  }, []); // Dependências vazias para executar apenas uma vez
+    getCurrentLocation(); // Captura localização uma vez
+  }, []);
 
-  // Filtrar e ordenar relatos
+  // 🔹 Filtrar e ordenar relatos
   useEffect(() => {
     let filtered = [...reports];
 
@@ -80,7 +104,7 @@ export default function ExploreReportsScreen() {
         if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) {
           return 0;
         }
-        
+
         const distanceA = calculateDistance(
           location.latitude,
           location.longitude,
@@ -99,7 +123,23 @@ export default function ExploreReportsScreen() {
     }
 
     setFilteredReports(filtered);
-  }, [reports, selectedSpecies, sortBy, location, calculateDistance]);
+  }, [reports, selectedSpecies, sortBy, location]);
+
+  const calculateDistance = useCallback(
+    (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const R = 6371; // Raio da Terra em km
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLon = (lon2 - lon1) * (Math.PI / 180);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * (Math.PI / 180)) *
+          Math.cos(lat2 * (Math.PI / 180)) *
+          Math.sin(dLon / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    },
+    []
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -120,17 +160,18 @@ export default function ExploreReportsScreen() {
       }
 
       return (
-        <ReportCard 
-          report={item} 
+        <ReportCard
+          report={item}
           distance={distance}
-          onEdit={() => {}} // Não permitir edição em relatos de outros usuários
-          onDelete={() => {}} // Não permitir exclusão em relatos de outros usuários
-          showActions={false} // Não mostrar ações
-          showContactButton={true} // Mostrar botão de contato
+          onEdit={() => {}}
+          onDelete={() => {}}
+          showActions={false}
+          showContactButton={true}
+          onContactPress={() => handleStartChat(item)} // 🔹 botão de contato com chat
         />
       );
     },
-    [location, calculateDistance]
+    [location, calculateDistance, handleStartChat]
   );
 
   if (loading) {
@@ -149,7 +190,7 @@ export default function ExploreReportsScreen() {
         sortBy={sortBy}
         onSortChange={setSortBy}
       />
-      
+
       <FlatList
         data={filteredReports}
         renderItem={renderReport}
@@ -177,98 +218,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-  listContainer: {
-    padding: 16,
-  },
-  cardContainer: {
-    marginBottom: 16,
-  },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-  },
-  distanceText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 64,
-  },
-  emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  locationButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  locationButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginLeft: 8,
-  },
-  locationInfo: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-  },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  list: {
+    padding: 16,
   },
   emptyContainer: {
     flex: 1,
@@ -279,7 +235,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  list: {
-    padding: 16,
-  },
-}); 
+});

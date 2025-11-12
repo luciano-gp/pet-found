@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, TextInput, View, Text, TouchableOpacity, Image, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { ChatService } from '../../../services/chatService';
-import { ChatMessage } from '../../../types/chat';
-import { supabase } from '../../../services/supabase';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { ImagePickerComponent } from '../../../components/ui/ImagePicker';
+import { useAuth } from '../../../contexts/AuthContext';
+import { ChatService } from '../../../services/chatService';
 import { StorageService } from '../../../services/storageService';
+import { supabase } from '../../../services/supabase';
+import { ChatMessage } from '../../../types/chat';
 
 
 export default function ChatScreen() {
@@ -120,45 +120,67 @@ export default function ChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messageList}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-      />
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 50}
+    >
+      <TouchableWithoutFeedback>
+        <View style={styles.inner}>
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.messageList}
+            onContentSizeChange={() =>
+              flatListRef.current?.scrollToEnd({ animated: true })
+            }
+          />
 
-      {showImagePicker && <ImagePickerComponent
-                            onImageSelected={(uri) => setSelectedImage(uri)}
-                            loading={false}
-                          />
-      }
+          {showImagePicker && (
+            <ImagePickerComponent
+              onImageSelected={(uri) => setSelectedImage(uri)}
+              loading={false}
+            />
+          )}
 
-      <View style={styles.inputContainer}>
-        <TouchableOpacity onPress={() => setShowImagePicker((prev) => !prev)}>
-          <Ionicons name="image-outline" size={28} color="#007AFF" />
-        </TouchableOpacity>
+          <View style={styles.inputContainer}>
+            <TouchableOpacity onPress={() => setShowImagePicker((prev) => !prev)}>
+              <Ionicons name="image-outline" size={28} color="#007AFF" />
+            </TouchableOpacity>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Digite uma mensagem..."
-          value={message}
-          onChangeText={setMessage}
-        />
+            <TextInput
+              style={styles.input}
+              placeholder="Digite uma mensagem..."
+              value={message}
+              onChangeText={setMessage}
+            />
 
-        <TouchableOpacity onPress={handleSend}>
-          <Ionicons name="send" size={24} color="#007AFF" />
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity onPress={handleSend}>
+              <Ionicons name="send" size={24} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  messageList: { padding: 10 },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  inner: {
+    flex: 1,
+    justifyContent: 'space-between',
+    marginBottom: 40,
+  },
+  messageList: {
+    padding: 10,
+    flexGrow: 1,
+  },
   messageContainer: {
     marginVertical: 6,
     maxWidth: '80%',
@@ -173,14 +195,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F0F0',
     alignSelf: 'flex-start',
   },
-  messageText: { fontSize: 16 },
-  messageImage: { width: 200, height: 200, borderRadius: 10, marginTop: 5 },
+  messageText: {
+    fontSize: 16,
+  },
+  messageImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 10,
+    marginTop: 5,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
     borderTopWidth: 1,
     borderColor: '#ddd',
+    backgroundColor: '#fff',
   },
   input: {
     flex: 1,

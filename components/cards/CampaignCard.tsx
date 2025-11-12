@@ -2,7 +2,7 @@ import { CampaignsService } from '@/services/campaignsService';
 import { UserContactService } from '@/services/userContactService';
 import { UserContact } from '@/types/auth';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Modal,
@@ -22,6 +22,7 @@ interface Props {
   onEdit?: (campaign: Campaign) => void;
   onDelete?: (id: string) => void;
   onValueChange?: () => void; // callback opcional para recarregar lista
+  onContactPress?: () => void;
 }
 
 export function CampaignCard({
@@ -31,6 +32,7 @@ export function CampaignCard({
   onEdit,
   onDelete,
   onValueChange,
+  onContactPress,
 }: Props) {
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [contact, setContact] = useState<UserContact | null>(null);
@@ -42,7 +44,7 @@ export function CampaignCard({
   const handleContact = async () => {
     try {
       setLoadingContact(true);
-      const userContact = await UserContactService.getUserContactByOngId(
+      const userContact = await UserContactService.getUserContactById(
         campaign.ong_id
       );
       setContact(userContact);
@@ -142,6 +144,16 @@ export function CampaignCard({
           </TouchableOpacity>
         )}
 
+        {onContactPress && (
+      <TouchableOpacity
+        style={styles.chatButton}
+        onPress={onContactPress}
+      >
+        <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+        <Text style={styles.chatButtonText}>Conversar</Text>
+      </TouchableOpacity>
+        )}
+
         {showActions && (
           <View style={styles.actions}>
             <TouchableOpacity
@@ -233,6 +245,23 @@ export function CampaignCard({
 }
 
 const styles = StyleSheet.create({
+
+  chatButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#007AFF',
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 10,
+  marginTop: 10,
+},
+chatButtonText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 14,
+  marginLeft: 6,
+},
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,

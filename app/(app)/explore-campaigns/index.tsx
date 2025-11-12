@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { CampaignCard } from '../../../components/cards/CampaignCard';
+import { useAuth } from '../../../contexts/AuthContext';
 import { CampaignsService } from '../../../services/campaignsService';
+import { ChatService } from '../../../services/chatService';
 import { Campaign } from '../../../types/campaign';
 
 export default function ExploreCampaignsScreen() {
@@ -19,7 +21,9 @@ export default function ExploreCampaignsScreen() {
   const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [sortBy, setSortBy] = useState<'highest' | 'lowest'>('highest'); // Ordenar por meta atingida
+  const [sortBy, setSortBy] = useState<'highest' | 'lowest'>('highest');
+
+  const { user } = useAuth(); // ✅ acesso ao usuário logado
 
   // 🔁 Carrega campanhas
   const loadCampaigns = useCallback(async () => {
@@ -78,15 +82,47 @@ export default function ExploreCampaignsScreen() {
     setSortBy((prev) => (prev === 'highest' ? 'lowest' : 'highest'));
   };
 
+  // 🗨️ Iniciar ou abrir chat
+  const handleStartChat = async (campaign: Campaign) => {
+    try {
+      if (!user) {
+        Alert.alert('Erro', 'Você precisa estar logado para iniciar um chat.');
+        return;
+      }
+
+      if (user.id === campaign.ong_id) {
+        Alert.alert('Aviso', 'Você não pode conversar consigo mesmo.');
+        return;
+      }
+
+      const chat = await ChatService.createThread({
+        participant_ids: [user.id, campaign.ong_id],
+      });
+
+      if (!chat || !chat.id) {
+        throw new Error('Erro ao criar ou obter o chat.');
+      }
+
+      router.push({
+        pathname: '/chat/chatScreen',
+        params: { id: chat.id },
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar chat:', error);
+      Alert.alert('Erro', 'Não foi possível iniciar a conversa.');
+    }
+  };
+
   const renderCampaign = useCallback(
     ({ item }: { item: Campaign }) => (
       <CampaignCard
         campaign={item}
         showContactButton={true}
         showActions={false}
+        onContactPress={() => handleStartChat(item)}
       />
     ),
-    []
+    [user]
   );
 
   if (loading) {
@@ -99,7 +135,7 @@ export default function ExploreCampaignsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header simples com botão de ordenação */}
+      {/* Header com botão de ordenação */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Campanhas Disponíveis</Text>
         <TouchableOpacity style={styles.sortButton} onPress={toggleSort}>

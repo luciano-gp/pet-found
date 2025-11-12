@@ -11,7 +11,7 @@ export const CampaignsService = {
     // Busca a ONG vinculada ao usuário logado
     const { data: ong } = await supabase
       .from('ongs')
-      .select('id')
+      .select('user_id')
       .eq('user_id', user?.id)
       .single();
 
@@ -20,7 +20,7 @@ export const CampaignsService = {
     const { data, error } = await supabase
       .from('campaigns')
       .select('*')
-      .eq('ong_id', ong.id)
+      .eq('ong_id', ong.user_id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -61,7 +61,7 @@ export const CampaignsService = {
       error: ongError,
     } = await supabase
       .from('ongs')
-      .select('id')
+      .select('user_id')
       .eq('user_id', user.id)
       .single();
 
@@ -75,7 +75,7 @@ export const CampaignsService = {
       title: campaign.title,
       description: campaign.description,
       goal_amount: campaign.goal_amount,
-      ong_id: ong.id,
+      ong_id: ong.user_id,
     });
 
     if (error) {

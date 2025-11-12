@@ -1,5 +1,5 @@
-import { useFocusEffect, router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -10,11 +10,11 @@ import {
 } from 'react-native';
 import { LostPetCard } from '../../../components/cards/LostPetCard';
 import { FilterBar } from '../../../components/ui/FilterBar';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useLocation } from '../../../hooks/useLocation';
+import { ChatService } from '../../../services/chatService';
 import { LostPetsService } from '../../../services/lostPetsService';
 import { LostPet } from '../../../types/pet';
-import { ChatService } from '../../../services/chatService';
-import { useAuth } from '../../../contexts/AuthContext';
 
 export default function ExploreLostPetsScreen() {
   const [lostPets, setLostPets] = useState<LostPet[]>([]);
@@ -118,7 +118,9 @@ export default function ExploreLostPetsScreen() {
         return;
       }
 
-      const chat = await ChatService.getOrCreateThread(user.id, lostPet.user_id);
+      const chat = await ChatService.createThread({
+        participant_ids: [user.id, lostPet.user_id],
+      });
       if (!chat || !chat.id) {
         throw new Error('Erro ao criar ou obter o chat.');
       }
@@ -154,7 +156,7 @@ export default function ExploreLostPetsScreen() {
           onDelete={() => {}}
           showActions={false}
           showContactButton={true}
-          onContactPress={() => handleStartChat(item)} // 🔹 integração do botão de chat
+          onContactPress={() => handleStartChat(item)}
         />
       );
     },

@@ -37,6 +37,7 @@ const MenuItem: React.FC<{
 export default function MenuScreen() {
   const { user, signOut } = useAuth();
   const [userName, setUserName] = React.useState<string | null>(null);
+  const [isOng, setIsOng] = React.useState<boolean>(false);
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -54,7 +55,9 @@ export default function MenuScreen() {
 
         if (userData) {
           setUserName(userData.name);
+          setIsOng(!!userData.is_ong);
         }
+
       } catch (error) {
         console.error('Erro ao carregar dados do usuário:', error);
       }
@@ -201,13 +204,13 @@ export default function MenuScreen() {
             onPress={() => router.push('/adoption-pets' as any)}
           />
 
-          {user?.type == 'ong' && (
+          {isOng && (
             <MenuItem
-            title="Ver Minhas Campanhas"
-            subtitle="Visualize e gerencie suas campanhas"
-            icon="ribbon-outline"
-            color="#FFC300"
-            onPress={() => router.push('/campaigns' as any)}
+              title="Ver Minhas Campanhas"
+              subtitle="Visualize e gerencie suas campanhas"
+              icon="ribbon-outline"
+              color="#FFC300"
+              onPress={() => router.push('/campaigns' as any)}
             />
           )}
         </View>
