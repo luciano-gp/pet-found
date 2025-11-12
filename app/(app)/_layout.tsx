@@ -20,6 +20,8 @@ export default function AppLayout() {
         <Stack.Screen name="map" options={{ headerShown: false }} />
         <Stack.Screen name="explore-adoption-pets" options={{ headerShown: false }} />
         <Stack.Screen name="adoption-pets" options={{ headerShown: false }} />
+        <Stack.Screen name="campaigns" options={{ headerShown: false }} />
+        <Stack.Screen name="explore-campaigns" options={{ headerShown: false }} />
         <Stack.Screen 
           name="contact-info" 
           options={{ 

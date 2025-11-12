@@ -63,7 +63,7 @@ export default function CreateAdoptionPetScreen() {
     if (!petName.trim()) newErrors.name = 'Nome é obrigatório';
     if (!petSpecie.trim()) newErrors.specie = 'Espécie é obrigatória';
     
-    if(imageUri && petDescription){
+    if(!imageUri && !petDescription){
       Alert.alert('Erro', 'Imagem ou descrição obrigatórios');
       newErrors.imagemDescription = 'Imagem ou descrição obrigatórios';
     }

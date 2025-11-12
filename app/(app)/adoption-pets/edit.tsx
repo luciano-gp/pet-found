@@ -76,8 +76,8 @@ export default function EditAdoptionPetScreen() {
     const newErrors: { name?: string; species?: string } = {};
     if (!name.trim()) newErrors.name = 'Nome é obrigatório';
     if (!species.trim()) newErrors.species = 'Espécie é obrigatória';
-    if (!imageUri) {
-      Alert.alert('Erro', 'É necessário adicionar uma foto');
+    if (!imageUri && !description) {
+      Alert.alert('Erro', 'É necessário adicionar uma foto ou descrição');
       return false;
     }
     setErrors(newErrors);
@@ -191,7 +191,7 @@ export default function EditAdoptionPetScreen() {
                 title="Salvar Alterações"
                 onPress={handleSubmit}
                 loading={uploading}
-                disabled={!name.trim() || !species.trim() || !imageUri || uploading}
+                disabled={!name.trim() || !species.trim() || uploading}
               />
             </View>
           </View>
