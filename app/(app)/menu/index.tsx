@@ -100,7 +100,7 @@ export default function MenuScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={styles.title}>PetGuard</Text>
+            <Text style={styles.title}>PetFound</Text>
             <TouchableOpacity
               style={styles.chatButton}
               onPress={() => router.push('/chat' as any)}>
@@ -239,7 +239,7 @@ export default function MenuScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            PetGuard - Projeto Acadêmico
+            PetFound - Projeto Acadêmico
           </Text>
           <Text style={styles.footerSubtext}>
             Ajude a encontrar pets perdidos e reporte pets avistados
